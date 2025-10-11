@@ -1,0 +1,15 @@
+{
+    "width": 616,
+    "height": 795,
+    "num_questions": 60,
+    "columns": 3,
+    "rows_per_column": 20,
+    "bubbles_per_question": 4,
+    "layout": {
+        "start_x": 100,
+        "start_y": 203,
+        "col_spacing": 174,
+        "row_spacing": 21,
+        "bubble_spacing": 28
+    }
+}
