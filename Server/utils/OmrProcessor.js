@@ -63,49 +63,112 @@
 // }
 
 
+// const express = require('express');
+// const router = express.Router();
+// const multer  = require('multer');
+// const fs = require('fs');
+// const axios = require('axios');
+// const FormData = require('form-data');
+
+// // configure multer
+// const upload = multer({ dest: 'tmp_uploads/' }); // temp storage
+
+// router.post('/upload-omr', upload.array('files'), async (req, res) => {
+//   try {
+//     const files = req.files; // array
+//     if (!files || files.length === 0) return res.status(400).json({ msg: 'No files uploaded' });
+
+//     const form = new FormData();
+//     files.forEach(file => {
+//       form.append('files', fs.createReadStream(file.path), { filename: file.originalname });
+//     });
+
+//     // send to FastAPI
+//     const response = await axios.post('http://localhost:8000/process-omr', form, {
+//       headers: {
+//         ...form.getHeaders()
+//       },
+//       maxContentLength: Infinity,
+//       maxBodyLength: Infinity
+//     });
+
+//     // cleanup temp files
+//     files.forEach(file => fs.unlink(file.path, () => {}));
+
+//     // Save results to MongoDB here (example)
+//     const results = response.data;
+//     // TODO: insert into DB (use your Result model)
+//     // Example: await Result.create({ batchId: results.batch_id, results: results.results, userId: req.user.id, createdAt: new Date() })
+
+//     return res.json(results);
+
+//   } catch (err) {
+//     console.error('Error forwarding to FastAPI:', err.response?.data || err.message || err);
+//     // cleanup temp files if present
+//     if (req.files) req.files.forEach(f => fs.unlink(f.path, () => {}));
+//     return res.status(500).json({ msg: 'Error processing OMR', error: err.message });
+//   }
+// });
+
+// module.exports = router;
+
+
 const express = require('express');
 const router = express.Router();
-const multer  = require('multer');
-const fs = require('fs');
+const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
 
-// configure multer
-const upload = multer({ dest: 'tmp_uploads/' }); // temp storage
+// -------------------- Multer Setup --------------------
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // max 10MB per file
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  }
+});
 
-router.post('/upload-omr', upload.array('files'), async (req, res) => {
+// -------------------- Upload Route --------------------
+router.post('/upload', upload.array('files'), async (req, res) => {
   try {
-    const files = req.files; // array
-    if (!files || files.length === 0) return res.status(400).json({ msg: 'No files uploaded' });
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.status(400).json({ msg: 'No files uploaded' });
+    }
 
+    // Prepare FormData to send to FastAPI
     const form = new FormData();
     files.forEach(file => {
-      form.append('files', fs.createReadStream(file.path), { filename: file.originalname });
+      form.append('files', file.buffer, { filename: file.originalname });
     });
 
-    // send to FastAPI
+    // Send files to FastAPI backend
     const response = await axios.post('http://localhost:8000/process-omr', form, {
-      headers: {
-        ...form.getHeaders()
-      },
+      headers: { ...form.getHeaders() },
       maxContentLength: Infinity,
       maxBodyLength: Infinity
     });
 
-    // cleanup temp files
-    files.forEach(file => fs.unlink(file.path, () => {}));
-
-    // Save results to MongoDB here (example)
+    // Get results from FastAPI
     const results = response.data;
-    // TODO: insert into DB (use your Result model)
-    // Example: await Result.create({ batchId: results.batch_id, results: results.results, userId: req.user.id, createdAt: new Date() })
 
+    // Optional: save to MongoDB
+    // await Result.create({
+    //   batchId: results.batch_id,
+    //   results: results.results,
+    //   userId: req.user.id,
+    //   createdAt: new Date()
+    // });
+
+    // Send FastAPI results back to frontend
     return res.json(results);
 
   } catch (err) {
-    console.error('Error forwarding to FastAPI:', err.response?.data || err.message || err);
-    // cleanup temp files if present
-    if (req.files) req.files.forEach(f => fs.unlink(f.path, () => {}));
+    console.error('Error sending files to FastAPI:', err.response?.data || err.message || err);
     return res.status(500).json({ msg: 'Error processing OMR', error: err.message });
   }
 });
