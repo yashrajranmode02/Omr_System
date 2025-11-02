@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const {User} = require('../config/db');
 const { requireAuth } = require('../middleware/auth');
-const RedisClient = require('../config/redis');
+
 // Register (teacher or student)
 router.post('/register', async (req, res) => {
   const { name, email_id, password, role, rollNumber } = req.body;
@@ -43,12 +43,7 @@ router.post('/login', async (req, res) => {
 // Logout
 router.post('/logout', requireAuth, async (req, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) return res.status(400).json({ msg: 'No token provided' });
-
-    // Blacklist token for 12h (same as JWT expiry)
-    await RedisClient.setEx(`blacklist_${token}`, 12 * 60 * 60, 'true');
-
+    // Tokens expire based on JWT expiry time (12h)
     return res.json({ msg: 'Logged out successfully' });
   } catch (err) {
     console.error('Logout Error:', err);

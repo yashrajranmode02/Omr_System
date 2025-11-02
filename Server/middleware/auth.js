@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const RedisClient = require('../config/redis');
+const jwt = require('jsonwebtoken'); 
 require('dotenv').config();
 
 const requireAuth = async (req, res, next) => {
@@ -7,12 +6,6 @@ const requireAuth = async (req, res, next) => {
   if (!token) return res.status(401).json({ msg: 'No token, auth denied' });
 
   try {
-    // Check if token is blacklisted
-    const isBlacklisted = await RedisClient.get(`blacklist_${token}`);
-    if (isBlacklisted) {
-      return res.status(401).json({ msg: 'Session expired, please login again' });
-    }
-
     const decoded = jwt.verify(token, process.env.SECRETE_KEY);
     req.user = decoded; // { id, email_id, role }
     next();

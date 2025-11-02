@@ -5,7 +5,7 @@ import json
 import cv2
 import numpy as np
 from ultralytics import YOLO
-import logging
+import logging 
 from typing import Dict, List, Tuple
 
 logging.basicConfig(level=logging.INFO)

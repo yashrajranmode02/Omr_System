@@ -1,15 +1,26 @@
-{
-    "width": 616,
-    "height": 795,
-    "num_questions": 60,
-    "columns": 3,
-    "rows_per_column": 20,
-    "bubbles_per_question": 4,
-    "layout": {
-        "start_x": 100,
-        "start_y": 203,
-        "col_spacing": 174,
-        "row_spacing": 21,
-        "bubble_spacing": 28
+    {
+        "width": 616,
+        "height": 795,
+        "num_questions": 60,
+        "columns": 3,
+        "rows_per_column": 20,
+        "bubbles_per_question": 4,
+        "offset_x_left": 214,
+        "offset_x_right": 215,
+        "offset_y_top": 280,
+        "offset_y_bottom": 290,
+        "roll_number_box": {
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 40,
+            "num_digits": 2
+        },
+        "layout": {
+            "start_x": 100,
+            "start_y": 203,
+            "col_spacing": 174,
+            "row_spacing": 21,
+            "bubble_spacing": 28
+        }
     }
-}

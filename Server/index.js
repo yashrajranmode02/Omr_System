@@ -1,7 +1,6 @@
 const express = require('express');
 require('dotenv').config();
-const { main } = require('./config/db');
-const RedisClient = require('./config/redis');
+const { main } = require('./config/db'); 
 
 const app = express();
 app.use(express.json());
@@ -27,13 +26,7 @@ async function connection() {
     await main();
     console.log('✅ MongoDB connected');
 
-    // Connect to Redis explicitly
-    if (!RedisClient.isOpen) {
-      await RedisClient.connect();
-      console.log('✅ Redis connected');
-    }
-
-    // Start server after both DBs are connected
+    // Start server
     app.listen(process.env.PORT_No, () => {
       console.log(`🚀 Server is listening at ${process.env.PORT_No}`);
     });
