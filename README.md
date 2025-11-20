@@ -1,3 +1,9 @@
+Firstly create 1 .env file in Server folder:-
+inside that paste this.
+PORT_No=5000
+SECRETE_KEY=yashraj1234
+MONGO_STRING="mongodb+srv://Learner_Mongo:Godsplan@cluster0.peanuas.mongodb.net/EDAI"
+
 For venv make sure you have installed:-
 pip install fastapi uvicorn
 pip install opencv-python
