@@ -1,5 +1,4 @@
-
-
+# main.py
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -7,76 +6,59 @@ import shutil
 import os
 import json
 import time
+from roll_predictor import predict_roll_number  # keep your existing roll predictor
+from omr_processor import get_default_processor
 
-from roll_predictor import predict_roll_number
-from omr_processor import get_default_processor  # ✅ Real OMR Processor
-
-
-# ============================================
-# Initialize FastAPI app
-# ============================================
 app = FastAPI(title="OMR + Roll Number Processor")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 UPLOAD_DIR = "uploaded_sheets"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Initialize processor once (YOLO not required)
+# template.json must be present in working directory
+OMR = get_default_processor(model_path=None, template_path="template.json")
 
-# ============================================
-# OMR Processing Endpoint
-# ============================================
 @app.post("/process-omr")
-async def process_omr(
-    files: List[UploadFile] = File(...),
-    answer_key: Optional[str] = Form(None)
-):
+async def process_omr(files: List[UploadFile] = File(...), answer_key: Optional[str] = Form(None)):
     results = {}
     total_time = 0.0
-
-    # --- Parse answer key JSON ---
     key_dict = {}
     if answer_key:
         try:
-            key_dict = json.loads(answer_key)
+            parsed = json.loads(answer_key)
+            key_dict = parsed
         except Exception as e:
             return {"error": f"Invalid answer key JSON: {str(e)}"}
 
-    # ✅ Initialize OMR Processor once
-    omr = get_default_processor(model_path="best.pt", template_path="template.json")
-
-    # --- Loop through uploaded files ---
     for file in files:
         file_path = os.path.join(UPLOAD_DIR, file.filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        print(f"✅ Received file: {file.filename}")
+        logger_msg = f"📄 Received: {file.filename}"
+        print(logger_msg)
         start_time = time.time()
 
-        # --- Step 1: OMR Detection ---
+        # OMR processing
         try:
-            omr_result = omr.process_image(file_path, key_dict)
+            omr_result = OMR.process_image(file_path, key_dict)
             detected = omr_result.get("detected", {})
             score = omr_result.get("score", 0)
+            status = omr_result.get("status", {})
+            error = omr_result.get("error", None)
         except Exception as e:
-            print(f"❌ OMR processing failed for {file.filename}: {e}")
             detected = {}
             score = 0
+            status = {}
+            error = str(e)
 
-        # --- Step 2: Roll Number Prediction ---
+        # roll number (optional)
         try:
             roll_number = predict_roll_number(file_path)
         except Exception as e:
-            roll_number = f"Error: {str(e)}"
+            roll_number = None
 
-        # --- Step 3: Timing and Summary ---
         processing_time = round(time.time() - start_time, 3)
         total_time += processing_time
 
@@ -84,10 +66,11 @@ async def process_omr(
             "roll_number": roll_number,
             "score": score,
             "detected": detected,
+            "status": status,
+            "error": error,
             "processing_time_sec": processing_time
         }
 
-    # --- Summary for all files ---
     results["_summary"] = {
         "files_processed": len(files),
         "total_time_sec": round(total_time, 3),
@@ -96,10 +79,6 @@ async def process_omr(
 
     return results
 
-
-# ============================================
-# Root Route
-# ============================================
 @app.get("/")
 def home():
     return {"message": "✅ OMR Processor API is running! Use /process-omr to upload sheets."}

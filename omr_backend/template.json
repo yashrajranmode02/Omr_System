@@ -1,26 +1,97 @@
-    {
-        "width": 616,
-        "height": 795,
-        "num_questions": 60,
-        "columns": 3,
-        "rows_per_column": 20,
-        "bubbles_per_question": 4,
-        "offset_x_left": 214,
-        "offset_x_right": 215,
-        "offset_y_top": 280,
-        "offset_y_bottom": 290,
-        "roll_number_box": {
-            "x": 50,
-            "y": 50,
-            "width": 200,
-            "height": 40,
-            "num_digits": 2
-        },
-        "layout": {
-            "start_x": 100,
-            "start_y": 203,
-            "col_spacing": 174,
-            "row_spacing": 21,
-            "bubble_spacing": 28
-        }
+{
+    "sheet": {
+      "paper_size_px": [2500, 3500]
+    },
+    "metadata_fields": {
+      "grade": {
+        "boxes": 2,
+        "label": "Grade",
+        "position_px": [250, 1350],
+        "box_size_px": [120, 120],
+        "gap_px": 10
+      },
+      "division": {
+        "boxes": 1,
+        "label": "Division",
+        "position_px": [650, 1350],
+        "box_size_px": [120, 120],
+        "gap_px": 0
+      },
+      "roll_no": {
+        "boxes": 3,
+        "label": "ROLL NO.",
+        "position_px": [250, 1900],
+        "box_size_px": [150, 150],
+        "gap_px": 20,
+        "bubbles_below": true,
+        "bubble_radius_below": 30,
+        "bubble_padding_below": 30,
+        "bubbles_count_below": 10
+      },
+      "subject_code": {
+        "boxes": 5,
+        "label": "Subject Code",
+        "position_px": [250, 900],
+        "box_size_px": [100, 100],
+        "gap_px": 0
+      },
+      "date": {
+        "boxes": 8,
+        "label": "Date",
+        "position_px": [250, 1600],
+        "box_size_px": [100, 100],
+        "gap_px": 8
+      },
+      "name": {
+        "boxes": 20,
+        "label": "NAME",
+        "position_px": [250, 1100],
+        "box_size_px": [100, 100],
+        "gap_px": 0
+      }
+    },
+    "signatures": {},
+    "questions": {
+      "start_position_px": [1355, 1400],
+      "columns": 2,
+      "questions_per_column": 20,
+      "bubble_radius_px": 30,
+      "bubble_padding_px": 30,
+      "options": ["A", "B", "C", "D"],
+      "column_gap_px": 200
+    },
+    "fiducials": {
+      "outer_radius_px": 70,
+      "inner_radius_px": 0,
+      "positions_px": {
+        "top_left": [100, 100],
+        "top_right": [2400, 100],
+        "bottom_left": [100, 3400],
+        "bottom_right": [2400, 3400]
+      }
+    },
+    "grid_box": {
+      "line_thickness_px": 2
+    },
+    "image_box": {
+      "position_px": [250, 250],
+      "size_px": [500, 500],
+      "label": ""
+    },
+    "instructions": {
+      "start_position_px": [900, 250],
+      "size_px": [1400, 750],
+      "border_thickness_px": 2,
+      "text_markdown_lines": [
+        "## *Instructions*:\\n",
+        "- Fill each bubble completely using a dark pencil or pen.",
+        "- Do not make stray marks or fold the answer sheet.",
+        "- Ensure the filled bubble corresponds to your chosen option.",
+        "- Write your name and roll number clearly.",
+        "- Double-check before submitting."
+      ],
+      "instructions_font_scale": 1.2,
+      "instructions_font_thickness": 2
     }
+  }
+  
