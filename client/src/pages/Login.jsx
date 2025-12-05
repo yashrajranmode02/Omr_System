@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -15,7 +15,10 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", formData);
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email_id: formData.email,
+        password: formData.password
+      });
       toast.success("Login Successful 🎉");
 
       // save token
@@ -70,8 +73,8 @@ export default function Login() {
         >
           Login
         </button>
-          <Link to="/register" className="text-blue-500 underline ml-17">Not having an account?</Link>
-      
+        <Link to="/register" className="text-blue-500 underline ml-17">Not having an account?</Link>
+
       </form>
     </div>
   );

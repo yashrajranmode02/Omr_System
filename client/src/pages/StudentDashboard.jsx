@@ -1,39 +1,88 @@
-import React from "react";
+import React, { useState } from "react";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 import DashboardLayout from "../styles/DashboardLayout";
 
 const StudentDashboard = () => {
+  const [rollNumber, setRollNumber] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!rollNumber) return toast.error("Please enter a roll number");
+
+    setLoading(true);
+    try {
+      const res = await axios.get(`http://localhost:5000/api/results/search?rollNumber=${rollNumber}`);
+      setResults(res.data);
+      setSearched(true);
+      if (res.data.length === 0) toast("No results found", { icon: "ℹ️" });
+    } catch (err) {
+      console.error(err);
+      toast.error("Error fetching results");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout>
+      <Toaster />
       <h1 className="text-2xl font-bold mb-6">🎓 Student Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Join Test */}
-        <div className="p-6 bg-white shadow rounded">
-          <h2 className="text-xl font-semibold mb-2">📚 Join Test</h2>
-          <p className="text-gray-600">Enter a test code to participate.</p>
-          <button className="mt-3 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            Join Now
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 className="text-xl font-semibold mb-4">Check Results</h2>
+        <form onSubmit={handleSearch} className="flex gap-4">
+          <input
+            type="text"
+            placeholder="Enter Roll Number"
+            value={rollNumber}
+            onChange={(e) => setRollNumber(e.target.value)}
+            className="flex-1 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Searching..." : "Search"}
           </button>
-        </div>
-
-        {/* View Results */}
-        <div className="p-6 bg-white shadow rounded">
-          <h2 className="text-xl font-semibold mb-2">📊 View Results</h2>
-          <p className="text-gray-600">See your test performance instantly.</p>
-          <button className="mt-3 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-            View Results
-          </button>
-        </div>
-
-        {/* Profile */}
-        <div className="p-6 bg-white shadow rounded">
-          <h2 className="text-xl font-semibold mb-2">👤 Profile</h2>
-          <p className="text-gray-600">Update your details here.</p>
-          <button className="mt-3 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
-            Edit Profile
-          </button>
-        </div>
+        </form>
       </div>
+
+      {searched && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Results</h2>
+          {results.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-2">Test Name</th>
+                    <th className="py-2">Score</th>
+                    <th className="py-2">Date</th>
+                    <th className="py-2">Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((result) => (
+                    <tr key={result._id} className="border-b last:border-0">
+                      <td className="py-3">{result.testId?.title || "Unknown Test"}</td>
+                      <td className="py-3 font-bold text-blue-600">{result.score}</td>
+                      <td className="py-3">{new Date(result.createdAt).toLocaleDateString()}</td>
+                      <td className="py-3">{result.remarks || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500">No results found for this roll number.</p>
+          )}
+        </div>
+      )}
     </DashboardLayout>
   );
 };

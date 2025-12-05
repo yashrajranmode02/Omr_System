@@ -6,7 +6,7 @@ const requireAuth = async (req, res, next) => {
   if (!token) return res.status(401).json({ msg: 'No token, auth denied' });
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRETE_KEY);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     req.user = decoded; // { id, email_id, role }
     next();
   } catch (err) {

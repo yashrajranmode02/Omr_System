@@ -1,47 +1,91 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import TeacherDashboard from "./pages/TeacherDashboard";
-import StudentDashboard from "./pages/StudentDashboard";
-import TestDetails from "./pages/TestDetails";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import axios from "axios";
+
+
+const AuthRedirect = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkUsers = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/auth/check-users");
+        if (res.data.count === 0) {
+          if (location.pathname !== "/register") {
+            navigate("/register");
+          }
+        } else {
+          // If users exist, and we are at root, redirect to login if not authenticated
+          const token = localStorage.getItem("token");
+          if (!token && location.pathname === "/") {
+            navigate("/login");
+          }
+        }
+      } catch (err) {
+        console.error("Error checking users:", err);
+      }
+    };
+    checkUsers();
+  }, [navigate, location]);
+
+  return null;
+};
+
+const UploadOMR = lazy(() => import("./pages/UploadOMR"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard"));
+const StudentDashboard = lazy(() => import("./pages/StudentDashboard"));
+const TestDetails = lazy(() => import("./pages/TestDetails"));
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      <AuthRedirect />
+      <Suspense fallback={<div className="p-4">Loading...</div>}>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<UploadOMR />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/student"
-          element={
+          {/* Student-only */}
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute role="student">
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-            // <ProtectedRoute role="student">
-              <StudentDashboard />
-            // {/* </ProtectedRoute> */}
-          }
-        />
-        <Route
-          path="/teacher"
-          element={
-            // <ProtectedRoute role="teacher">
-              <TeacherDashboard />
-            // {/* </ProtectedRoute> */}
-          }
-        />
-        <Route
-          path="/result"
-          element={
-            // <ProtectedRoute>
-              <TestDetails />
-            // {/* </ProtectedRoute> */}
-          }
-        />
-      </Routes>
+          {/* Teacher-only */}
+          <Route
+            path="/teacher"
+            element={
+              <ProtectedRoute role="teacher">
+                <TeacherDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Both logged-in roles allowed */}
+          <Route
+            path="/result"
+            element={
+              <ProtectedRoute>
+                <TestDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

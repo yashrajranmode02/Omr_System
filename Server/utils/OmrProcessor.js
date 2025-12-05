@@ -1,53 +1,110 @@
+// const express = require('express');
+// const router = express.Router();
+// const multer = require('multer');
+// const axios = require('axios');
+// const FormData = require('form-data');
 
-const express = require('express');
+// const storage = multer.memoryStorage();
+
+// const upload = multer({
+//   storage,
+//   limits: { fileSize: 10 * 1024 * 1024 },
+//   fileFilter: (req, file, cb) => {
+//     if (!file.mimetype.startsWith('image/')) {
+//       return cb(new Error('Only image files allowed'), false);
+//     }
+//     cb(null, true);
+//   }
+// });
+
+// router.post("/upload", upload.any(), async (req, res) => {
+//     const files = req.files.filter(f => f.fieldname === "files");
+//     const answerKey = req.body.answer_key; // NOW WORKS
+
+//     if (!files.length) return res.status(400).json({ msg: "No files uploaded" });
+
+//     const form = new FormData();
+
+//     files.forEach(f => {
+//         form.append("files", f.buffer, { filename: f.originalname });
+//     });
+
+//     form.append("answer_key", answerKey || "{}");
+
+//     const response = await axios.post("http://localhost:8000/process-omr",
+//         form,
+//         { headers: form.getHeaders() }
+//     );
+
+//     return res.json(response.data);
+// });
+
+
+
+// module.exports = router;
+const express = require("express");
 const router = express.Router();
-const multer = require('multer');
-const axios = require('axios');
-const FormData = require('form-data');
+const multer = require("multer");
+const axios = require("axios");
+const FormData = require("form-data");
 
 // -------------------- Multer Setup --------------------
 const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // max 10MB per file
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'), false);
-    }
-    cb(null, true);
-  }
-});
+const upload = multer({ storage }).any(); // accept ANY field exactly like frontend sends
 
 // -------------------- Upload Route --------------------
-router.post('/upload', upload.array('files'), async (req, res) => {
+router.post("/upload", upload, async (req, res) => {
   try {
-    const files = req.files;
+    console.log("📥 Incoming OMR Body:", req.body);
+    console.log("📸 Incoming OMR Files:", req.files?.length);
+
+    // Extract answer key from body
+    const answerKey = req.body?.answer_key || "{}";
+
+    // Extract only image files
+    const files = req.files?.filter(f => f.fieldname === "files");
+
     if (!files || files.length === 0) {
-      return res.status(400).json({ msg: 'No files uploaded' });
+      return res.status(400).json({ msg: "No files uploaded" });
     }
 
-    // Prepare FormData to send to FastAPI
+    // Prepare FormData for FastAPI
     const form = new FormData();
+
+    // 🟢 Add answer key first — VERY IMPORTANT
+    form.append("answer_key", answerKey);
+
+    console.log("➡️ Forwarding Answer Key to FastAPI:", answerKey);
+
+    // 🟢 Add images
     files.forEach(file => {
-      form.append('files', file.buffer, { filename: file.originalname });
+      form.append("files", file.buffer, file.originalname);
     });
 
-    // Send files to FastAPI backend
-    const response = await axios.post('http://localhost:8000/process-omr', form, {
-      headers: { ...form.getHeaders() },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity
-    });
+    // Send to FastAPI
+    const response = await axios.post(
+      "http://localhost:8000/process-omr",
+      form,
+      {
+        headers: form.getHeaders(),
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      }
+    );
 
-    // Get results from FastAPI
-    const results = response.data;
-
-    
-    return res.json(results);
+    console.log("✅ FastAPI Response Received");
+    return res.json(response.data);
 
   } catch (err) {
-    console.error('Error sending files to FastAPI:', err.response?.data || err.message || err);
-    return res.status(500).json({ msg: 'Error processing OMR', error: err.message });
+    console.error(
+      "❌ Error in forwarding OMR to FastAPI:",
+      err.response?.data || err.message
+    );
+
+    return res.status(500).json({
+      msg: "Error processing OMR",
+      error: err.message,
+    });
   }
 });
 

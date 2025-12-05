@@ -17,12 +17,7 @@ export default function DashboardLayout({ children }) {
         <div className="p-6 text-2xl font-bold border-b border-gray-700">
           OMR <span className="text-blue-400">System</span>
         </div>
-        <nav className="flex-1 p-4 space-y-4">
-          <Link to="/" className="block py-2 px-4 rounded hover:bg-gray-700">Home</Link>
-          <Link to="/tests" className="block py-2 px-4 rounded hover:bg-gray-700">Tests</Link>
-          <Link to="/result" className="block py-2 px-4 rounded hover:bg-gray-700">Results</Link>
-          <Link to="/profile" className="block py-2 px-4 rounded hover:bg-gray-700">Profile</Link>
-        </nav>
+        
       </aside>
 
       {/* Main Content */}

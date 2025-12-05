@@ -1,41 +1,51 @@
 import { useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
 export default function Register() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "student", // default role
+    role: "student",
   });
+
   const navigate = useNavigate();
 
+  // ✅ FIXED handleChange
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // ✅ FIXED handleSubmit with correct payload
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", formData);
+      const payload = {
+        name: formData.name,
+        email_id: formData.email, // backend expects email_id
+        password: formData.password,
+        role: formData.role,
+      };
+
+      const res = await axios.post("http://localhost:5000/api/auth/register", payload);
+
       toast.success("Registration Successful 🎉");
 
       // save token
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
       // redirect based on role
       if (res.data.user.role === "student") {
         navigate("/student");
-      } else if (res.data.user.role === "teacher") {
-        navigate("/teacher");
       } else {
-        navigate("/");
+        navigate("/teacher");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration Failed ❌");
+      toast.error(err.response?.data?.msg || "Registration Failed ❌");
     }
   };
 
@@ -94,7 +104,10 @@ export default function Register() {
         >
           Register
         </button>
-        <Link to="/login" className="text-blue-500 underline ml-17">Already Have an account?</Link>
+
+        <Link to="/login" className="text-blue-500 underline block text-center">
+          Already have an account?
+        </Link>
       </form>
     </div>
   );
