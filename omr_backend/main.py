@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -6,58 +5,64 @@ import shutil
 import os
 import json
 import time
-from roll_predictor import predict_roll_number  # keep your existing roll predictor
-from omr_processor import get_default_processor
+
+from omr_processor import get_default_processor   # roll number included
 
 app = FastAPI(title="OMR + Roll Number Processor")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# ✔ FIXED CORS middleware spelling
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 UPLOAD_DIR = "uploaded_sheets"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Initialize processor once (YOLO not required)
-# template.json must be present in working directory
-OMR = get_default_processor(model_path=None, template_path="template.json")
+OMR = get_default_processor(template_path="template.json")
+
 
 @app.post("/process-omr")
-async def process_omr(files: List[UploadFile] = File(...), answer_key: Optional[str] = Form(None)):
+async def process_omr(
+    files: List[UploadFile] = File(...),
+    answer_key: Optional[str] = Form(None)
+):
     results = {}
     total_time = 0.0
     key_dict = {}
+
     if answer_key:
         try:
-            parsed = json.loads(answer_key)
-            key_dict = parsed
+            key_dict = json.loads(answer_key)
         except Exception as e:
             return {"error": f"Invalid answer key JSON: {str(e)}"}
 
     for file in files:
         file_path = os.path.join(UPLOAD_DIR, file.filename)
+
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        logger_msg = f"📄 Received: {file.filename}"
-        print(logger_msg)
+        print(f"📄 Received: {file.filename}")
         start_time = time.time()
 
-        # OMR processing
         try:
             omr_result = OMR.process_image(file_path, key_dict)
+
             detected = omr_result.get("detected", {})
             score = omr_result.get("score", 0)
             status = omr_result.get("status", {})
-            error = omr_result.get("error", None)
+            roll_number = omr_result.get("roll_number")
+            error = omr_result.get("error")
         except Exception as e:
             detected = {}
             score = 0
             status = {}
-            error = str(e)
-
-        # roll number (optional)
-        try:
-            roll_number = predict_roll_number(file_path)
-        except Exception as e:
             roll_number = None
+            error = str(e)
 
         processing_time = round(time.time() - start_time, 3)
         total_time += processing_time
@@ -78,6 +83,7 @@ async def process_omr(files: List[UploadFile] = File(...), answer_key: Optional[
     }
 
     return results
+
 
 @app.get("/")
 def home():
