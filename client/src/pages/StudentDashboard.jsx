@@ -65,7 +65,6 @@ const StudentDashboard = () => {
                   <tr className="border-b">
                     <th className="py-2">Test Name</th>
                     <th className="py-2">Score</th>
-                    <th className="py-2">Date</th>
                     <th className="py-2">Remarks</th>
                   </tr>
                 </thead>
@@ -74,8 +73,24 @@ const StudentDashboard = () => {
                     <tr key={result._id} className="border-b last:border-0">
                       <td className="py-3">{result.testId?.title || result.fileName || "Direct Upload"}</td>
                       <td className="py-3 font-bold text-blue-600">{result.score}</td>
-                      <td className="py-3">{new Date(result.createdAt).toLocaleDateString()}</td>
-                      <td className="py-3">{result.remarks || "-"}</td>
+                      <td className="py-3">
+                        {(() => {
+                          if (!result.comments) return result.remarks || "-";
+                          const multiple = Object.entries(result.comments)
+                            .filter(([q, status]) => status === "Multiple_detected")
+                            .map(([q]) => q);
+
+                          if (multiple.length > 0) {
+                            return (
+                              <div className="text-red-600 text-sm">
+                                <div>Multiple Marks: {multiple.length}</div>
+                                <div>Q: {multiple.join(", ")}</div>
+                              </div>
+                            );
+                          }
+                          return result.remarks || "-";
+                        })()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

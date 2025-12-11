@@ -5,6 +5,7 @@ const ResultSchema = new mongoose.Schema({
   rollNumber: { type: String, required: true },
   score: { type: Number, required: true },
   answers: { type: Object },
+  comments: { type: Object }, // Stores multiple mark details
   remarks: { type: String },
   fileName: { type: String },
   detected: { type: Object },

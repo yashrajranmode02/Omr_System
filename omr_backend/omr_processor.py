@@ -1703,7 +1703,17 @@ def mean_intensity_in_circle(img, cx, cy, r):
     return float(patch[mask].mean())
 
 def extract_bubble_darkness(warped, cfg):
-    gray = normalize_sheet(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY))
+    """
+    Improved bubble darkness estimator for pencil + pen outlines.
+    Uses:
+      - CLAHE contrast normalization
+      - inner fill intensity
+      - local annulus background
+      - edge density (Canny) to detect pen outlines
+    """
+
+    gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+    gray = normalize_sheet(gray)
 
     q = cfg["questions"]
     start_x, start_y = q["start_position_px"]
@@ -1713,10 +1723,22 @@ def extract_bubble_darkness(warped, cfg):
     QPC = q["questions_per_column"]
     COLS = q["columns"]
 
-    H_STEP = 2 * R + pad
-    V_STEP = 2 * R + pad
+    H_STEP = (2 * R) + pad
+    V_STEP = (2 * R) + pad
 
-    background = float(np.percentile(gray, 90))
+    H_img, W_img = gray.shape
+    global_bg = float(np.percentile(gray, 90))
+
+    # Edge map for detecting pen outlines
+    blur_edges = cv2.GaussianBlur(gray, (3, 3), 0)
+    edges = cv2.Canny(blur_edges, 50, 140)
+
+    EDGE_SCALE = 10.0     # lowered so outlines do not explode
+    EDGE_MIN = 0.05       # minimum edge fraction
+    RAW_MIN_FILL = 10.0   # below this bubble is blank
+
+    ANN_IN = int(1.1 * R)
+    ANN_OUT = int(2.1 * R)
 
     raw = {}
     qid = 1
@@ -1726,18 +1748,59 @@ def extract_bubble_darkness(warped, cfg):
         cy = start_y
         for _ in range(QPC):
             raw[qid] = {}
+
             for i, opt in enumerate(opts):
-                cx = cx_base + R + i * H_STEP
-                cyc = cy + R
+                cx = int(cx_base + R + i * H_STEP)
+                cy_center = int(cy + R)
 
-                meanv = mean_intensity_in_circle(gray, cx, cyc, R)
-                darkness = max(0.0, background - meanv)
+                # Mean brightness inside bubble
+                mean_in = mean_intensity_in_circle(gray, cx, cy_center, R)
 
-                raw[qid][opt] = float(darkness)
+                # Local background estimation
+                x0 = max(0, cx - ANN_OUT)
+                x1 = min(W_img, cx + ANN_OUT)
+                y0 = max(0, cy_center - ANN_OUT)
+                y1 = min(H_img, cy_center + ANN_OUT)
 
-            cy += V_STEP
+                patch = gray[y0:y1, x0:x1]
+                if patch.size == 0:
+                    local_bg = global_bg
+                else:
+                    rr, cc = np.ogrid[:patch.shape[0], :patch.shape[1]]
+                    cy_l = cy_center - y0
+                    cx_l = cx - x0
+                    dist2 = (rr - cy_l) ** 2 + (cc - cx_l) ** 2
+
+                    ann_mask = (dist2 <= ANN_OUT**2) & (dist2 >= ANN_IN**2)
+                    if ann_mask.sum() > 20:
+                        local_bg = float(patch[ann_mask].mean())
+                    else:
+                        local_bg = global_bg
+
+                # Fill darkness metric
+                fill_dark = max(0.0, local_bg - mean_in)
+
+                # Edge-density for pen outlines
+                e_patch = edges[y0:y1, x0:x1]
+                if e_patch.size > 0:
+                    inner_mask = (dist2 <= (0.7 * R) ** 2)
+                    inner_edges = e_patch[inner_mask]
+                    edge_frac = float(np.count_nonzero(inner_edges)) / float(inner_mask.sum())
+                else:
+                    edge_frac = 0.0
+
+                edge_score = edge_frac * EDGE_SCALE if edge_frac > EDGE_MIN else 0.0
+
+                # Final combined score
+                if fill_dark < RAW_MIN_FILL and edge_frac < EDGE_MIN:
+                    raw[qid][opt] = 0.0
+                else:
+                    raw[qid][opt] = float(fill_dark + edge_score)
+
             qid += 1
-        cx_base += len(opts) * H_STEP + gap
+            cy += V_STEP
+
+        cx_base += (len(opts) * H_STEP) + gap
 
     return raw
 
@@ -1787,7 +1850,8 @@ def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
         # ---------- CLEAR SINGLE ----------
         if top_val >= 0.55 and (top_val - second_val) >= 0.20:
             selected[q] = [top_opt]
-            comments[q] = None
+            comments[q] = "Single_detected"
+
 
         # ---------- MULTIPLE ----------
         elif top_val >= 0.55:
@@ -1798,6 +1862,66 @@ def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
         else:
             selected[q] = None
             comments[q] = "Not marked"
+
+    return selected, comments
+
+def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
+    """
+    Returns:
+      - selected[q] = ["A"] for single
+      - selected[q] = ["A", "C"] for multiple
+      - comments[q] = "Single_detected", "Multiple_detected", "Not marked", "Partial_mark"
+    """
+
+    selected = {}
+    comments = {}
+
+    for q in norm:
+        opt_norm = norm[q]
+        opt_raw  = raw[q]
+
+        # ------- BLANK CHECK -------
+        max_raw = max(opt_raw.values())
+        if max_raw < min_darkness:
+            selected[q] = None
+            comments[q] = "Not marked"
+            continue
+
+        # ------- RELATIVE BLANK CHECK -------
+        avg_raw = sum(opt_raw.values()) / len(opt_raw)
+        if max_raw < dominance_ratio * avg_raw:
+            selected[q] = None
+            comments[q] = "Not marked"
+            continue
+
+        # ------- SORT OPTIONS -------
+        sorted_opts = sorted(opt_norm.items(), key=lambda x: x[1], reverse=True)
+
+        top_opt, top_val = sorted_opts[0]
+        second_val = sorted_opts[1][1]
+
+        # ---- DETECT MULTIPLE ----
+        multi = []
+        for opt, val in opt_norm.items():
+            # any bubble close to the top value is considered marked
+            if val >= (top_val - 0.15) and opt_raw[opt] >= min_darkness:
+                multi.append(opt)
+
+        # ---- SINGLE ANSWER ----
+        if len(multi) == 1:
+            selected[q] = [multi[0]]
+            comments[q] = "Single_detected"
+            continue
+
+        # ---- MULTIPLE ANSWERS ----
+        if len(multi) > 1:
+            selected[q] = multi
+            comments[q] = "Multiple_detected"
+            continue
+
+        # ---- FALLBACK ----
+        selected[q] = None
+        comments[q] = "Not marked"
 
     return selected, comments
 
