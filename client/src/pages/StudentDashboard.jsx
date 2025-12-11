@@ -15,7 +15,10 @@ const StudentDashboard = () => {
 
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/results/search?rollNumber=${rollNumber}`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`http://localhost:5000/api/results/search?rollNumber=${rollNumber}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setResults(res.data);
       setSearched(true);
       if (res.data.length === 0) toast("No results found", { icon: "ℹ️" });
@@ -69,7 +72,7 @@ const StudentDashboard = () => {
                 <tbody>
                   {results.map((result) => (
                     <tr key={result._id} className="border-b last:border-0">
-                      <td className="py-3">{result.testId?.title || "Unknown Test"}</td>
+                      <td className="py-3">{result.testId?.title || result.fileName || "Direct Upload"}</td>
                       <td className="py-3 font-bold text-blue-600">{result.score}</td>
                       <td className="py-3">{new Date(result.createdAt).toLocaleDateString()}</td>
                       <td className="py-3">{result.remarks || "-"}</td>

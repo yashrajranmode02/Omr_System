@@ -19,7 +19,7 @@ app.use(cors({
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', require('./Routes/Auth'));
 app.use('/api/tests', require('./Routes/Test'));
-app.use('/api/omr', require('./utils/OmrProcessor'));
+// app.use('/api/omr', require('./utils/OmrProcessor'));
 app.use('/api/results', require('./Routes/Result'));
 
 async function connection() {

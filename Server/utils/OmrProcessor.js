@@ -41,6 +41,73 @@
 
 
 
+// // module.exports = router;
+// const express = require("express");
+// const router = express.Router();
+// const multer = require("multer");
+// const axios = require("axios");
+// const FormData = require("form-data");
+
+// // -------------------- Multer Setup --------------------
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage }).any(); // accept ANY field exactly like frontend sends
+
+// // -------------------- Upload Route --------------------
+// router.post("/upload", upload, async (req, res) => {
+//   try {
+//     console.log("📥 Incoming OMR Body:", req.body);
+//     console.log("📸 Incoming OMR Files:", req.files?.length);
+
+//     // Extract answer key from body
+//     const answerKey = req.body?.answer_key || "{}";
+
+//     // Extract only image files
+//     const files = req.files?.filter(f => f.fieldname === "files");
+
+//     if (!files || files.length === 0) {
+//       return res.status(400).json({ msg: "No files uploaded" });
+//     }
+
+//     // Prepare FormData for FastAPI
+//     const form = new FormData();
+
+//     // 🟢 Add answer key first — VERY IMPORTANT
+//     form.append("answer_key", answerKey);
+
+//     console.log("➡️ Forwarding Answer Key to FastAPI:", answerKey);
+
+//     // 🟢 Add images
+//     files.forEach(file => {
+//       form.append("files", file.buffer, file.originalname);
+//     });
+
+//     // Send to FastAPI
+//     const response = await axios.post(
+//       "http://localhost:8000/process-omr",
+//       form,
+//       {
+//         headers: form.getHeaders(),
+//         maxContentLength: Infinity,
+//         maxBodyLength: Infinity,
+//       }
+//     );
+
+//     console.log("✅ FastAPI Response Received");
+//     return res.json(response.data);
+
+//   } catch (err) {
+//     console.error(
+//       "❌ Error in forwarding OMR to FastAPI:",
+//       err.response?.data || err.message
+//     );
+
+//     return res.status(500).json({
+//       msg: "Error processing OMR",
+//       error: err.message,
+//     });
+//   }
+// });
+
 // module.exports = router;
 const express = require("express");
 const router = express.Router();
@@ -50,59 +117,57 @@ const FormData = require("form-data");
 
 // -------------------- Multer Setup --------------------
 const storage = multer.memoryStorage();
-const upload = multer({ storage }).any(); // accept ANY field exactly like frontend sends
+
+// ✅ CORRECT: create multer instance first, THEN call .any()
+const upload = multer({ storage }).any(); 
 
 // -------------------- Upload Route --------------------
 router.post("/upload", upload, async (req, res) => {
   try {
-    console.log("📥 Incoming OMR Body:", req.body);
-    console.log("📸 Incoming OMR Files:", req.files?.length);
+    console.log("📥 Incoming Body:", req.body);
+    console.log("📸 Incoming Files Count:", req.files?.length);
 
-    // Extract answer key from body
-    const answerKey = req.body?.answer_key || "{}";
-
-    // Extract only image files
-    const files = req.files?.filter(f => f.fieldname === "files");
-
-    if (!files || files.length === 0) {
-      return res.status(400).json({ msg: "No files uploaded" });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ msg: "No files received by Node server" });
     }
 
-    // Prepare FormData for FastAPI
+    const files = req.files;
+    const answerKey = req.body.answer_key || "{}";
+
     const form = new FormData();
 
-    // 🟢 Add answer key first — VERY IMPORTANT
+    // ✅ 반드시 먼저 answer_key 추가
     form.append("answer_key", answerKey);
 
-    console.log("➡️ Forwarding Answer Key to FastAPI:", answerKey);
-
-    // 🟢 Add images
+    // ✅ 모든 이미지 FastAPI로 전달
     files.forEach(file => {
       form.append("files", file.buffer, file.originalname);
     });
 
-    // Send to FastAPI
+    console.log("➡️ Forwarding", files.length, "files to FastAPI");
+
     const response = await axios.post(
-      "http://localhost:8000/process-omr",
+      "http://127.0.0.1:8000/process-omr",
       form,
       {
-        headers: form.getHeaders(),
+        headers: {
+          ...form.getHeaders(),
+          "Content-Length": form.getLengthSync(), // ✅ prevents hanging
+        },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
+        timeout: 300000, // ✅ 5 min timeout
       }
     );
 
-    console.log("✅ FastAPI Response Received");
+    console.log("✅ FastAPI Response OK");
     return res.json(response.data);
 
   } catch (err) {
-    console.error(
-      "❌ Error in forwarding OMR to FastAPI:",
-      err.response?.data || err.message
-    );
+    console.error("❌ OMR Forwarding Error:", err.response?.data || err.message);
 
     return res.status(500).json({
-      msg: "Error processing OMR",
+      msg: "Error forwarding OMR to FastAPI",
       error: err.message,
     });
   }

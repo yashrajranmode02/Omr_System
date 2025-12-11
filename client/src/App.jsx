@@ -48,7 +48,7 @@ export default function App() {
       <Suspense fallback={<div className="p-4">Loading...</div>}>
         <Routes>
           {/* Public */}
-          <Route path="/" element={<UploadOMR />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
