@@ -38,6 +38,7 @@ const Register = lazy(() => import("./pages/Register"));
 const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard"));
 const StudentDashboard = lazy(() => import("./pages/StudentDashboard"));
 const TestDetails = lazy(() => import("./pages/TestDetails"));
+const TemplateDesigner = lazy(() => import("./pages/TemplateDesigner"));
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -68,6 +69,14 @@ export default function App() {
             element={
               <ProtectedRoute role="teacher">
                 <TeacherDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/template-designer"
+            element={
+              <ProtectedRoute role="teacher">
+                <TemplateDesigner />
               </ProtectedRoute>
             }
           />

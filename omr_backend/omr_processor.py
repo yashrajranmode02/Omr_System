@@ -303,56 +303,6 @@ def normalize_darkness(raw):
 
 def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
     """
-    min_darkness     : absolute ink threshold
-    dominance_ratio : how much darker the top bubble must be vs row average
-    """
-
-    selected = {}
-    comments = {}
-
-    for q in norm:
-        optvals_norm = norm[q]
-        optvals_raw  = raw[q]
-
-        # ---------- 1. ABSOLUTE BLANK TEST ----------
-        max_raw = max(optvals_raw.values())
-        if max_raw < min_darkness:
-            selected[q] = None
-            comments[q] = "Not marked"
-            continue
-
-        # ---------- 2. RELATIVE BLANK TEST (VS AVERAGE) ----------
-        avg_raw = sum(optvals_raw.values()) / len(optvals_raw)
-        if max_raw < dominance_ratio * avg_raw:
-            selected[q] = None
-            comments[q] = "Not marked"
-            continue
-
-        # ---------- 3. NORMALIZED DECISION ----------
-        sorted_opts = sorted(optvals_norm.items(), key=lambda x: x[1], reverse=True)
-        top_opt, top_val = sorted_opts[0]
-        second_val = sorted_opts[1][1]
-
-        # ---------- CLEAR SINGLE ----------
-        if top_val >= 0.55 and (top_val - second_val) >= 0.20:
-            selected[q] = [top_opt]
-            comments[q] = "Single_detected"
-
-
-        # ---------- MULTIPLE ----------
-        elif top_val >= 0.55:
-            selected[q] = None
-            comments[q] = "Multiple marks"
-
-        # ---------- FAINT ----------
-        else:
-            selected[q] = None
-            comments[q] = "Not marked"
-
-    return selected, comments
-
-def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
-    """
     Returns:
       - selected[q] = ["A"] for single
       - selected[q] = ["A", "C"] for multiple
@@ -374,11 +324,16 @@ def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
             continue
 
         # ------- RELATIVE BLANK CHECK -------
+        # Only apply strict relative check if the mark is somewhat faint.
+        # If the mark is very dark (e.g. > 50.0), we trust it even if average is high 
+        # (which happens when multiple bubbles are filled).
         avg_raw = sum(opt_raw.values()) / len(opt_raw)
-        if max_raw < dominance_ratio * avg_raw:
-            selected[q] = None
-            comments[q] = "Not marked"
-            continue
+        
+        if max_raw < 50.0:
+            if max_raw < dominance_ratio * avg_raw:
+                selected[q] = None
+                comments[q] = "Not marked"
+                continue
 
         # ------- SORT OPTIONS -------
         sorted_opts = sorted(opt_norm.items(), key=lambda x: x[1], reverse=True)
@@ -389,8 +344,8 @@ def detect_selected_options(norm, raw, min_darkness=20.0, dominance_ratio=1.8):
         # ---- DETECT MULTIPLE ----
         multi = []
         for opt, val in opt_norm.items():
-            # any bubble close to the top value is considered marked
-            if val >= (top_val - 0.15) and opt_raw[opt] >= min_darkness:
+            # Relaxed threshold: any bubble within 0.25 of the top value is included
+            if val >= (top_val - 0.25) and opt_raw[opt] >= min_darkness:
                 multi.append(opt)
 
         # ---- SINGLE ANSWER ----

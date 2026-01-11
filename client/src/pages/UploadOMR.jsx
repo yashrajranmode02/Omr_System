@@ -3,12 +3,14 @@ import React, { useState, useRef } from "react";
 
 export default function UploadOMR() {
   const [files, setFiles] = useState([]);
+  const [templateFile, setTemplateFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState(null);
   const [results, setResults] = useState(null);
   const [answerKey, setAnswerKey] = useState("");
   const inputRef = useRef(null);
+  const templateRef = useRef(null);
 
   const handleFiles = (fileList) => {
     const arr = Array.from(fileList);
@@ -40,7 +42,13 @@ export default function UploadOMR() {
     }
   };
 
-  const uploadFiles = () => {
+  const handleTemplateSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setTemplateFile(e.target.files[0]);
+    }
+  };
+
+  const uploadFiles = async () => {
     if (!files.length) return;
 
     // Validate JSON
@@ -58,6 +66,26 @@ export default function UploadOMR() {
 
     // 🔥 SEND ANSWER KEY FIRST
     formData.append("answer_key", answerKey || "{}");
+
+    // 🔥 SEND TEMPLATE JSON IF SELECTED
+    if (templateFile) {
+      // We will read the file and send its content as a string, 
+      // or just send the file and let backend read it.
+      // The backend expects "template_json" as a string in Form(None) usually, 
+      // or we can send it as a file.
+      // Let's read it here to be safe and consistent with the user's request "send template ka json".
+      // Actually sending as a file is often cleaner for large JSONs, but let's see.
+      // The user said "template ka json".
+      // Let's send it as a file with key 'template_file' or string 'template_json'.
+      // Backend changes will match this. I'll read it as text here.
+      const text = await templateFile.text();
+      if (!isValidJSON(text)) {
+        setMessage({ type: "error", text: "❌ Invalid Template JSON File" });
+        setUploading(false);
+        return;
+      }
+      formData.append("template_json", text);
+    }
 
     // 🔥 SEND FILES
     files.forEach((f) => formData.append("files", f));
@@ -80,6 +108,7 @@ export default function UploadOMR() {
         setResults(res);
         setFiles([]);
         setAnswerKey("");
+        setTemplateFile(null); // Clear template
       } else {
         setMessage({
           type: "error",
@@ -145,25 +174,60 @@ export default function UploadOMR() {
             </button>
           </div>
 
-          {/* ANSWER KEY INPUT */}
-          <label className="block text-gray-700 font-medium">
-            Custom Answer Key (JSON)
-          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ANSWER KEY INPUT */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">
+                Custom Answer Key (JSON)
+              </label>
+              <textarea
+                value={answerKey}
+                onChange={(e) => setAnswerKey(e.target.value)}
+                placeholder='{"1":3,"2":1,...}'
+                className="w-full p-2 border rounded-md h-32 text-sm font-mono"
+              />
+            </div>
 
-          <textarea
-            value={answerKey}
-            onChange={(e) => setAnswerKey(e.target.value)}
-            placeholder='{"1":3,"2":1,...}'
-            className="w-full p-2 border rounded-md h-32 text-sm font-mono"
-          />
+            {/* TEMPLATE UPLOAD */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">
+                Template JSON (Optional)
+              </label>
+              <div className="border p-4 rounded-md h-32 flex flex-col justify-center items-center text-center bg-gray-50">
+                <input
+                  type="file"
+                  accept=".json"
+                  ref={templateRef}
+                  onChange={handleTemplateSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => templateRef.current.click()}
+                  className="text-blue-600 text-sm font-semibold hover:underline"
+                >
+                  {templateFile ? templateFile.name : "+ Select Template JSON"}
+                </button>
+                {templateFile && (
+                  <button
+                    onClick={() => setTemplateFile(null)}
+                    className="text-red-500 text-xs mt-2"
+                  >
+                    Remove
+                  </button>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  If not provided, default template will be used.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {message && (
             <div
-              className={`p-3 mt-3 rounded ${
-                message.type === "success"
+              className={`p-3 mt-3 rounded ${message.type === "success"
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-700"
-              }`}
+                }`}
             >
               {message.text}
             </div>

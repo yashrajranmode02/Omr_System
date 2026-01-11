@@ -189,7 +189,16 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-from omr_processor import get_default_processor
+from omr_processor import get_default_processor, OMRProcessor
+from fastapi.responses import StreamingResponse, JSONResponse
+from pydantic import BaseModel
+import io
+import numpy as np
+from PIL import Image
+from omr_core import generate_omr_sheet, DEFAULT_CONFIG
+
+class ConfigPayload(BaseModel):
+    config: dict
 
 load_dotenv()
 
@@ -236,8 +245,15 @@ executor = ThreadPoolExecutor(max_workers=2)
 # -------------------------------------------------------------
 # ✅ HELPERS
 # -------------------------------------------------------------
-def run_omr_sync(image_path, key_dict):
-    return OMR.process_image(image_path, key_dict)
+def run_omr_sync(omr_engine, image_path, key_dict):
+    return omr_engine.process_image(image_path, key_dict)
+
+def np_to_png_bytes(np_img: np.ndarray) -> bytes:
+    pil_img = Image.fromarray(np_img)
+    buf = io.BytesIO()
+    pil_img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
 
 def stringify_keys(obj):
     if isinstance(obj, dict):
@@ -261,9 +277,11 @@ def flatten_files(files):
 # ✅ MAIN ENDPOINT (100% SAFE NOW)
 # -------------------------------------------------------------
 @app.post("/process-omr")
+
 async def process_omr(
     files: List[UploadFile] = File(...),
-    answer_key: Optional[str] = Form(None)
+    answer_key: Optional[str] = Form(None),
+    template_json: Optional[str] = Form(None)
 ):
     print("🔔 /process-omr called")
 
@@ -281,6 +299,19 @@ async def process_omr(
             print("✅ Parsed answer key")
         except Exception as e:
             return {"error": f"Invalid answer key JSON: {str(e)}"}
+
+    # ✅ DETERMINE OMR ENGINE (Custom vs Default)
+    if template_json:
+        try:
+            custom_template = json.loads(template_json)
+            active_omr = OMRProcessor(custom_template)
+            print("✅ Using CUSTOM OMR Template provided by client")
+        except Exception as e:
+            print(f"❌ Invalid Template JSON: {e}")
+            return {"error": f"Invalid Template JSON: {str(e)}"}
+    else:
+        active_omr = OMR
+        print("✅ Using DEFAULT OMR Template")
 
     loop = asyncio.get_running_loop()
 
@@ -305,6 +336,7 @@ async def process_omr(
                 loop.run_in_executor(
                     executor,
                     run_omr_sync,
+                    active_omr,
                     file_path,
                     key_dict
                 ),
@@ -365,6 +397,39 @@ async def process_omr(
 
     print("🏁 Done")
     return results
+
+
+# -------------------------------------------------------------
+# ✅ GENERATION ENDPOINTS
+# -------------------------------------------------------------
+@app.post("/generate")
+async def generate_omr(
+    config_json: str = Form(...),
+    photo: Optional[UploadFile] = File(None)
+):
+    try:
+        config = json.loads(config_json)
+    except Exception as e:
+        return JSONResponse({"error": f"Invalid JSON: {e}"}, status_code=400)
+
+    pil_image = None
+    if photo:
+        pil_image = Image.open(photo.file).convert("RGB")
+
+    omr_np = generate_omr_sheet(config, pil_image)
+    buf = np_to_png_bytes(omr_np)
+    return StreamingResponse(buf, media_type="image/png")
+
+@app.post("/preview-config")
+async def preview_config(payload: ConfigPayload):
+    config = payload.config
+    omr_np = generate_omr_sheet(config, None)
+    buf = np_to_png_bytes(omr_np)
+    return StreamingResponse(buf, media_type="image/png")
+
+@app.get("/default-config")
+async def get_default():
+    return DEFAULT_CONFIG
 
 # -------------------------------------------------------------
 # ✅ HEALTH CHECK

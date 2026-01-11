@@ -27,3 +27,7 @@ tensorflow>=2.13.0
 # Database
 pymongo==4.6.0
 python-dotenv==1.0.0
+
+# Template Generation
+markdown
+beautifulsoup4
