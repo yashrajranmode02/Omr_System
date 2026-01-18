@@ -119,7 +119,7 @@ const FormData = require("form-data");
 const storage = multer.memoryStorage();
 
 // ✅ CORRECT: create multer instance first, THEN call .any()
-const upload = multer({ storage }).any(); 
+const upload = multer({ storage }).any();
 
 // -------------------- Upload Route --------------------
 router.post("/upload", upload, async (req, res) => {
@@ -146,8 +146,9 @@ router.post("/upload", upload, async (req, res) => {
 
     console.log("➡️ Forwarding", files.length, "files to FastAPI");
 
+    const omrUrl = process.env.OMR_API_URL || "http://localhost:8000";
     const response = await axios.post(
-      "http://127.0.0.1:8000/process-omr",
+      `${omrUrl}/process-omr`,
       form,
       {
         headers: {

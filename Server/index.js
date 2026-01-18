@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const cors = require('cors');
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   credentials: true
 }));
@@ -27,8 +27,9 @@ async function connection() {
     await main();
     console.log('✅ MongoDB connected');
 
-    app.listen(process.env.PORT_No, () => {
-      console.log(`🚀 Server is listening at ${process.env.PORT_No}`);
+    const PORT = process.env.PORT_No || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is listening at ${PORT}`);
     });
 
   } catch (err) {

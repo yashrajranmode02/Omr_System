@@ -1,0 +1,46 @@
+services:
+  # 1. Python OMR Backend
+  - type: web
+    name: omr-backend
+    runtime: python
+    buildCommand: cd omr_backend && pip install -r requirements.txt
+    startCommand: cd omr_backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_STRING
+        sync: false
+
+  # 2. Node.js Server
+  - type: web
+    name: omr-server
+    runtime: node
+    buildCommand: cd Server && npm install
+    startCommand: cd Server && npm start
+    envVars:
+      - key: MONGO_STRING
+        sync: false
+      - key: OMR_API_URL
+        fromService:
+          type: web
+          name: omr-backend
+          property: url
+      - key: CLIENT_URL
+        sync: false
+
+  # 3. React/Vite Client
+  - type: static
+    name: omr-client
+    runtime: static
+    buildCommand: cd client && npm install && npm run build
+    publishDir: client/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: omr-server
+          property: url
+        # Append /api manually in the dashboard config if needed, or update code to append it. 
+        # Since 'fromService' gives the base URL (e.g., https://srv.com), and your code expects /api appended?
+        # Code in api.js: baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+        # So VITE_API_URL needs to be https://omr-server.onrender.com/api.
+        # Render's fromService only gives the root URL. 
+        # User will might need to edit this in dashboard. 

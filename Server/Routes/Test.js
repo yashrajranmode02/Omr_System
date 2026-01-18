@@ -33,11 +33,11 @@ router.post('/', requireAuth, requireRole('teacher'), async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     if (req.user.role === 'teacher') {
-      const tests = await Test.find({ teacherId: req.user.id }).populate('assignedStudents','name email rollNumber');
+      const tests = await Test.find({ teacherId: req.user.id }).populate('assignedStudents', 'name email rollNumber');
       return res.json(tests);
     } else {
       // student: tests where assignedStudents includes them
-      const tests = await Test.find({ assignedStudents: req.user.id }).populate('teacherId','name email');
+      const tests = await Test.find({ assignedStudents: req.user.id }).populate('teacherId', 'name email');
       return res.json(tests);
     }
   } catch (err) {
@@ -56,7 +56,8 @@ router.post("/:id/upload", requireAuth, requireRole("teacher"), upload.array("fi
     const form = new FormData();
     req.files.forEach(f => form.append("files", f.buffer, { filename: f.originalname }));
 
-    const fastRes = await axios.post("http://localhost:8000/process-omr", form, {
+    const omrUrl = process.env.OMR_API_URL || "http://localhost:8000";
+    const fastRes = await axios.post(`${omrUrl}/process-omr`, form, {
       headers: form.getHeaders(),
     });
 
