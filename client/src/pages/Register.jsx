@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -30,7 +30,7 @@ export default function Register() {
         role: formData.role,
       };
 
-      const res = await axios.post("http://localhost:5000/api/auth/register", payload);
+      const res = await api.post("/auth/register", payload);
 
       toast.success("Registration Successful 🎉");
 
