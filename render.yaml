@@ -5,6 +5,7 @@ services:
     name: omr-backend
     runtime: python
     rootDir: omr_backend
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -16,6 +17,7 @@ services:
     name: omr-server
     runtime: node
     rootDir: Server
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -26,11 +28,12 @@ services:
       - key: CLIENT_URL
         sync: false
 
-  # 3. React Client (Running as Web Service to bypass verification issues)
+  # 3. React Client (Web Service)
   - type: web
     name: omr-client
     runtime: node
     rootDir: client
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npx serve -s dist -l $PORT
     envVars:
