@@ -1,3 +1,4 @@
+# Render Blueprint
 services:
   # 1. Python OMR Backend
   - type: web
@@ -33,7 +34,4 @@ staticSites:
     publishDir: client/dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: omr-server
-          property: url
+        sync: false
