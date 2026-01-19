@@ -90,9 +90,16 @@ export default function UploadOMR() {
     // 🔥 SEND FILES
     files.forEach((f) => formData.append("files", f));
 
+    // Use the Python backend URL
+    const getOmrBaseUrl = () => {
+      let url = import.meta.env.VITE_OMR_API_URL || "http://localhost:8000";
+      if (url.endsWith("/")) return url.slice(0, -1);
+      return url;
+    };
+
     // ---- XHR upload (FastAPI-friendly) ----
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:8000/process-omr");
+    xhr.open("POST", `${getOmrBaseUrl()}/process-omr`);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable)
@@ -225,8 +232,8 @@ export default function UploadOMR() {
           {message && (
             <div
               className={`p-3 mt-3 rounded ${message.type === "success"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
                 }`}
             >
               {message.text}
