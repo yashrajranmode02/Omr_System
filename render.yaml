@@ -26,12 +26,13 @@ services:
       - key: CLIENT_URL
         sync: false
 
-staticSites:
-  # 3. React/Vite Client
-  - name: omr-client
+  # 3. React Client (Running as Web Service to bypass verification issues)
+  - type: web
+    name: omr-client
+    runtime: node
     rootDir: client
     buildCommand: npm install && npm run build
-    publishDir: dist
+    startCommand: npx serve -s dist -l $PORT
     envVars:
       - key: VITE_API_URL
         sync: false
