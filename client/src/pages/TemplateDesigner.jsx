@@ -3,7 +3,13 @@ import axios from "axios";
 import DashboardLayout from "../styles/DashboardLayout";
 
 // Use the Python backend URL
-const FASTAPI_BASE_URL = "http://localhost:8000";
+// Use the Python backend URL
+const getOmrBaseUrl = () => {
+    let url = import.meta.env.VITE_OMR_API_URL || "http://localhost:8000";
+    if (url.endsWith("/")) return url.slice(0, -1);
+    return url;
+};
+const FASTAPI_BASE_URL = getOmrBaseUrl();
 
 const TemplateDesigner = () => {
     const [configJson, setConfigJson] = useState("{}");
