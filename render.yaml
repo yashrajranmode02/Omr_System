@@ -26,9 +26,9 @@ services:
       - key: CLIENT_URL
         sync: false
 
+staticSites:
   # 3. React/Vite Client
-  - type: static
-    name: omr-client
+  - name: omr-client
     runtime: static
     buildCommand: cd client && npm install && npm run build
     publishDir: client/dist
@@ -38,9 +38,3 @@ services:
           type: web
           name: omr-server
           property: url
-        # Append /api manually in the dashboard config if needed, or update code to append it. 
-        # Since 'fromService' gives the base URL (e.g., https://srv.com), and your code expects /api appended?
-        # Code in api.js: baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-        # So VITE_API_URL needs to be https://omr-server.onrender.com/api.
-        # Render's fromService only gives the root URL. 
-        # User will might need to edit this in dashboard. 
