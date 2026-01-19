@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import toast, { Toaster } from "react-hot-toast";
 import DashboardLayout from "../styles/DashboardLayout";
 
@@ -16,7 +16,7 @@ const StudentDashboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:5000/api/results/search?rollNumber=${rollNumber}`, {
+      const res = await api.get(`/results/search?rollNumber=${rollNumber}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setResults(res.data);

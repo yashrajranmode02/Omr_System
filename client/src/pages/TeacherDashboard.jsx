@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../styles/DashboardLayout";
 import UploadOMR from "./UploadOMR";
@@ -16,7 +16,7 @@ const TeacherDashboard = () => {
   const fetchTests = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/tests", {
+      const res = await api.get("/tests", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTests(res.data);
