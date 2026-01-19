@@ -108,7 +108,7 @@
 
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
+# from tensorflow.keras.models import load_model
 import json
 import os
 import random
@@ -116,7 +116,7 @@ import random
 # ===============================
 # Configuration
 # ===============================
-MODEL_PATH = "mnist_cnn1.h5"     # Trained digit model
+# MODEL_PATH = "mnist_cnn1.h5"     # Trained digit model
 TEMPLATE_PATH = "template.json"  # JSON file with roll number box coordinates
 
 
@@ -138,44 +138,18 @@ def enhance_and_prepare(digit_img, size=(28, 28)):
 # Core Prediction Function
 # ===============================
 def predict_roll_number(image_path, template_path=TEMPLATE_PATH):
-    """Predict the roll number from OMR sheet"""
-    # Load image
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError(f"❌ Could not read image from {image_path}")
+    """
+    Predict the roll number from OMR sheet.
+    NOTE: ML Model (TensorFlow) disabled for Free Tier Deployment.
+    Returns None or simple template matching if implemented in future.
+    """
+    print(f"⚠ ML Roll Prediction disabled in deployment: {image_path}")
+    return None
 
-    # Load model
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"❌ Model not found: {MODEL_PATH}")
-    model = load_model(MODEL_PATH)
-
-    # Load template
-    if not os.path.exists(template_path):
-        raise FileNotFoundError(f"❌ Template not found: {template_path}")
-    with open(template_path, "r") as f:
-        template = json.load(f)
-
-    roll_box = template["roll_number_box"]
-    x, y, w, h = roll_box["x"], roll_box["y"], roll_box["width"], roll_box["height"]
-    num_digits = roll_box["num_digits"]
-
-    # Crop roll number region
-    roi = image[y:y+h, x:x+w]
-    digit_width = w // num_digits
-    digits = [roi[:, i*digit_width:(i+1)*digit_width] for i in range(num_digits)]
-
-    # Predict digits
-    predictions = []
-    for i, digit_img in enumerate(digits):
-        input_data = enhance_and_prepare(digit_img)
-        pred = model.predict(input_data, verbose=0)
-        digit = np.argmax(pred)
-        predictions.append(str(digit))
-        print(f"Digit {i+1}: {digit} (confidence {np.max(pred):.2%})")
-
-    roll_number = "".join(predictions)
-    print(f"\n✅ Predicted Roll Number: {roll_number}")
-    return roll_number
+    # Original Logic Commmented Out:
+    # image = cv2.imread(image_path)
+    # ... logic ...
+    # return roll_number
 
 
 # ===============================
