@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Suspense, lazy, useEffect } from "react";
-import axios from "axios";
-
+import api from "./services/api"; // Add this import
 
 const AuthRedirect = () => {
   const navigate = useNavigate();
@@ -10,7 +9,7 @@ const AuthRedirect = () => {
   useEffect(() => {
     const checkUsers = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/check-users");
+        const res = await api.get("/auth/check-users");
         if (res.data.count === 0) {
           if (location.pathname !== "/register") {
             navigate("/register");
