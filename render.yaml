@@ -4,8 +4,9 @@ services:
   - type: web
     name: omr-backend
     runtime: python
-    buildCommand: cd omr_backend && pip install -r requirements.txt
-    startCommand: cd omr_backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: omr_backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGO_STRING
         sync: false
@@ -14,24 +15,23 @@ services:
   - type: web
     name: omr-server
     runtime: node
-    buildCommand: cd Server && npm install
-    startCommand: cd Server && npm start
+    rootDir: Server
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: MONGO_STRING
         sync: false
       - key: OMR_API_URL
-        fromService:
-          type: web
-          name: omr-backend
-          property: url
+        sync: false
       - key: CLIENT_URL
         sync: false
 
 staticSites:
   # 3. React/Vite Client
   - name: omr-client
-    buildCommand: cd client && npm install && npm run build
-    publishDir: client/dist
+    rootDir: client
+    buildCommand: npm install && npm run build
+    publishDir: dist
     envVars:
       - key: VITE_API_URL
         sync: false
